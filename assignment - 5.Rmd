@@ -1,0 +1,222 @@
+---
+output:
+  
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+        
+  pdf_document:
+    
+    fig_caption: true
+    fig_crop: false
+  word_document: default
+params:
+    printcode: false
+---
+---
+title: "assignment 5"
+author: "Siranjeevi"
+date: "2024-10-03"
+output: html_document
+---
+
+```{r}
+library(ISLR)
+library(MASS)
+library(class)
+library(boot)
+library(glmnet)
+library(leaps)
+library(boot)
+library(pls)
+```
+
+```{r}
+weekly=Weekly
+college=College
+boston=Boston
+auto=Auto
+carseat=Carseats
+```
+
+
+11) We will now try to predict per capita crime rate in the Boston data set.
+
+a) Try out some of the regression methods explored in this chapter,such as best subset selection, the lasso, ridge regression, and PCR. Present and discuss results for the approaches that you consider.
+
+```{r}
+fit_lm=lm(crim~.,data = boston)
+summary(fit_lm)
+```
+    From this model, the variable zn,dis,rad,black,medv are having relationship with response.
+
+```{r}
+sub_1=regsubsets(crim~.,data = boston,nvmax = 13)
+sub_1_summary<-summary(sub_1)
+sub_1_summary$adjr2
+```
+```{r}
+par(mfrow=c(1,3))
+plot(sub_1_summary$cp,xlab = "Number of variable",ylab="C_p",type = "l")
+
+points(which.min(sub_1_summary$cp),sub_1_summary$cp[which.min(sub_1_summary$cp)],col="red",cex=3,pch=20)
+
+plot(sub_1_summary$bic,xlab = "Number of variable",ylab="BIC",type = "l")
+
+points(which.min(sub_1_summary$bic),sub_1_summary$bic[which.min(sub_1_summary$bic)],col="red",cex=3,pch=20)
+
+plot(sub_1_summary$adjr2,xlab = "Number of variable",ylab="adjr2",type = "l")
+
+points(which.max(sub_1_summary$adjr2),sub_1_summary$adjr2[which.max(sub_1_summary$adjr2)],col="red",cex=3,pch=20)
+```
+```{r}
+coef(sub_1,which.min(sub_1_summary$cp))
+```
+```{r}
+forwd_subset=regsubsets(crim~.,data = boston,nvmax = 13,method="forward")
+
+forwd_subset_summary<-summary(forwd_subset)
+forwd_subset_summary$adjr2
+```
+```{r}
+par(mfrow=c(1,3))
+
+plot(forwd_subset_summary$cp,xlab = "Number of variables",ylab = "C_p",type = "l")
+
+points(which.min(forwd_subset_summary$cp),forwd_subset_summary$cp[which.min(forwd_subset_summary$cp)],col="yellow",cex=2,pch=20)
+
+plot(forwd_subset_summary$bic,xlab = "Number of variables",ylab = "bic",type = "l")
+
+points(which.min(forwd_subset_summary$bic),forwd_subset_summary$bic[which.min(forwd_subset_summary$bic)],col="yellow",cex=2,pch=20)
+
+plot(forwd_subset_summary$adjr2,xlab = "Number of variables",ylab = "adjr2",type = "l")
+
+points(which.max(forwd_subset_summary$adjr2),forwd_subset_summary$adjr2[which.max(forwd_subset_summary$adjr2)],col="yellow",cex=2,pch=20)
+```
+```{r}
+coef(forwd_subset,which.min(forwd_subset_summary$cp))
+```
+```{r}
+back_sub=regsubsets(crim~.,data = boston,nvmax = 13,method="backward")
+back_sub_summary<-summary(back_sub)
+back_sub_summary$outmat
+```
+```{r}
+par(mfrow=c(1,3))
+
+plot(back_sub_summary$cp,xlab = "Number of variables",ylab = "c_p",type = "l")
+
+points(which.min(back_sub_summary$cp),back_sub_summary$cp[which.min(back_sub_summary$cp)],col="gray",cex=3,pch=20)
+
+plot(back_sub_summary$bic,xlab = "Number of variables",ylab = "BIC",type = "l")
+
+points(which.min(back_sub_summary$bic),back_sub_summary$bic[which.min(back_sub_summary$bic)],col="gray",cex=3,pch=20)
+
+plot(back_sub_summary$adjr2,xlab = "Number of variables",ylab = "adjr2",type = "l")
+
+points(which.max(back_sub_summary$adjr2),back_sub_summary$adjr2[which.max(back_sub_summary$adjr2)],col="gray",cex=3,pch=20)
+```
+```{r}
+coef(back_sub,which.max(back_sub_summary$adjr2))
+```
+```{r}
+set.seed(8)
+boston_matrix_crim<-model.matrix(crim~.,data = boston)[,-1]
+```
+
+```{r}
+ridge_ft_1=cv.glmnet(boston_matrix_crim,boston$crim,alpha=0)
+ridge_1<-ridge_ft_1$lambda.min
+ridge_1
+```
+```{r}
+#coef(ridge_1,s=ridge_ft_1)
+```
+```{r}
+set.seed(22)
+lasso_2=cv.glmnet(boston_matrix_crim,boston$crim,alpha=1)
+lasso_1<-lasso_2$lambda.min
+lasso_1
+```
+```{r}
+coef(lasso_2,s=lasso_1)
+```
+```{r}
+set.seed(11)
+cr_3=pcr(crim~.,data=boston,scale=TRUE,validation="CV")
+cr_3_summary<- summary(cr_3)
+cr_3_summary
+```
+```{r}
+validationplot(cr_3,val.type = "MSEP")
+```
+```{r}
+loadings_2<-cr_3$loadings[,1:8]
+loadings_2
+```
+```{r}
+set.seed(32)
+lsr_4=plsr(crim~.,data=boston,scale=TRUE,validation="CV")
+lsr_4_summary<- summary(lsr_4)
+lsr_4_summary
+```
+
+```{r}
+validationplot(lsr_4,val.type = "MSEP")
+```
+```{r}
+loadings_3=lsr_4$loadings[,1:2]
+loadings_3
+```
+b) Propose a model (or set of models) that seem to perform well on this data set, and justify your answer. Make sure that you are
+evaluating model performance using validation set error, crossvalidation, or some other reasonable alternative, as opposed to
+using training error.
+
+```{r}
+boston_train=sample(nrow(boston),nrow(boston)*0.70)
+```
+
+```{r}
+boston_tr=boston[boston_train,]
+```
+```{r}
+boston_test=boston[-boston_train,]
+```
+
+```{r}
+set.seed(42)
+train_matrix=model.matrix(crim~.,data = boston_tr)[,-1]
+test_matrix=model.matrix(crim~.,data = boston_test)[,-1]
+```
+
+```{r}
+ridge_3=cv.glmnet(train_matrix,boston_tr$crim,alpha=0)
+ridge_lam_3=ridge_3$lambda.min
+```
+
+```{r}
+ridge_3=predict(ridge_3,s=ridge_lam_3,newx =test_matrix)
+test_error_3=mean((boston_test$crim- ridge_3)^2)
+```
+```{r}
+rmse_ridge_3= sqrt(test_error_3)
+(rmse_ridge_3/mean(boston_test$crim))*100
+```
+```{r}
+lasso_3=cv.glmnet(train_matrix,boston_tr$crim,alpha=1)
+lasso_lam_3=lasso_3$lambda.min
+```
+```{r}
+pred_lasso_3=predict(lasso_3,s=lasso_lam_3,newx = test_matrix)
+test_error_boston=mean((boston_test$crim - pred_lasso_3)^2)
+```
+```{r}
+rmse_lasso_3= sqrt(test_error_3)
+(rmse_lasso_3/mean(boston_test$crim))*100
+```
+c) Does your chosen model involve all of the features in the data set? Why or why not?
+  
+    The chosen model does not involve all of the features in the data set, because some of them are not statistically significant to response.
+
